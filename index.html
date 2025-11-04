@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BypassLabs - Secure Access</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Courier New', monospace;
+    background: #0a0a0a;
+    color: #00ff41;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Matrix rain background */
+  #matrix-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0; opacity: 0.15;
+  }
+
+  /* Scanline effect */
+  .scanline {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,255,65,0.02) 50%);
+    background-size: 100% 4px;
+    pointer-events: none; z-index: 9999;
+    animation: scanline 8s linear infinite;
+  }
+  @keyframes scanline {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+
+  /* Welcome message with animation */
+  #welcomeText {
+    font-size: clamp(1.5em, 5vw, 3em);
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    position: relative;
+    text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41, 0 0 30px #00ff41;
+    border-right: 0.15em solid #00ff41;
+    white-space: nowrap; overflow: hidden;
+    animation: blink 0.7s step-end infinite;
+    user-select: none;
+  }
+  @keyframes blink {
+    from, to { border-color: transparent; }
+    50% { border-color: #00ff41; }
+  }
+  #welcomeText:hover {
+    animation: glitch 0.3s infinite;
+  }
+  @keyframes glitch {
+    0% { transform: translate(0); text-shadow: 0 0 10px #00ff41, 2px 2px 0 #ff0000, -2px -2px 0 #0000ff; }
+    25% { transform: translate(-2px, 2px); text-shadow: 0 0 10px #00ff41, -2px -2px 0 #ff0000, 2px 2px 0 #0000ff; }
+    50% { transform: translate(2px, -2px); }
+    75% { transform: translate(-2px, -2px); }
+    100% { transform: translate(0); }
+  }
+
+  /* Login box styles */
+  #loginContainer {
+    display: none;
+    background: rgba(0,0,0,0.9);
+    padding: 40px;
+    border: 2px solid #00ff41;
+    max-width: 450px;
+    width: 90%;
+    border-radius: 0;
+    box-shadow: 0 0 20px rgba(0,255,65,0.3), inset 0 0 20px rgba(0,255,65,0.05);
+    position: relative;
+    animation: slideIn 0.5s ease-out;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #loginContainer::before {
+    content: '';
+    position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
+    background: linear-gradient(45deg, #00ff41, #0a0a0a, #00ff41);
+    z-index: -1; filter: blur(5px); opacity: 0.5;
+  }
+
+  /* Header style */
+  .panel-header {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.2em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .panel-header::before { content: '[ '; color: #00ff41; }
+  .panel-header::after { content: ' ]'; color: #00ff41; }
+
+  /* Labels */
+  label {
+    display: block;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-size: 0.9em;
+    letter-spacing: 1px;
+  }
+  label::before { content: '> '; color: #00ff41; }
+
+  /* Inputs */
+  input {
+    width: 100%; padding: 12px;
+    margin-bottom: 20px;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid #00ff41;
+    border-radius: 0;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    transition: all 0.3s;
+  }
+  input:focus {
+    outline: none;
+    box-shadow: 0 0 15px rgba(0,255,65,0.5);
+    background: rgba(0,255,65,0.05);
+  }
+  input::placeholder {
+    color: rgba(0,255,65,0.4);
+  }
+
+  /* Button styles */
+  #loginBtn {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    color: #00ff41;
+    border: 2px solid #00ff41;
+    border-radius: 0;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  #loginBtn::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: #00ff41;
+    transition: left 0.3s; z-index: -1;
+  }
+  #loginBtn:hover::before {
+    left: 0;
+  }
+  #loginBtn:hover {
+    color: #0a0a0a;
+    box-shadow: 0 0 20px rgba(0,255,65,0.8);
+  }
+  #loginBtn:active {
+    transform: scale(0.98);
+  }
+
+  /* Message box */
+  #message {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #00ff41;
+    text-align: center;
+    font-size: 0.95em;
+    min-height: 50px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.5);
+  }
+  #message:empty { border-color: transparent; }
+
+  /* Navigation buttons */
+  #navButtons {
+    display: none;
+    margin-top: 20px;
+  }
+
+  /* Hacker-style H1 */
+  h1 {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(2em, 6vw, 4em);
+    font-weight: bold;
+    color: #00ff41;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 30px;
+    position: relative;
+    text-shadow: 
+      0 0 5px #00ff41,
+      0 0 10px #00ff41,
+      0 0 15px #00ff41,
+      0 0 20px #00ff41;
+    border: 2px solid #00ff41;
+    background: rgba(0,0,0,0.8);
+    padding: 20px;
+    border-radius: 0;
+    box-shadow: 
+      0 0 20px rgba(0,255,65,0.3),
+      inset 0 0 20px rgba(0,255,65,0.1);
+    animation: hackerGlow 2s ease-in-out infinite alternate;
+  }
+  @keyframes hackerGlow {
+    0% { 
+      text-shadow: 
+        0 0 5px #00ff41,
+        0 0 10px #00ff41,
+        0 0 15px #00ff41,
+        0 0 20px #00ff41;
+      box-shadow: 
+        0 0 20px rgba(0,255,65,0.3),
+        inset 0 0 20px rgba(0,255,65,0.1);
+    }
+    100% { 
+      text-shadow: 
+        0 0 10px #00ff41,
+        0 0 20px #00ff41,
+        0 0 30px #00ff41,
+        0 0 40px #00ff41;
+      box-shadow: 
+        0 0 30px rgba(0,255,65,0.5),
+        inset 0 0 30px rgba(0,255,65,0.2);
+    }
+  }
+  h1::before {
+    content: '>>> ';
+    color: #00ff41;
+    animation: blink 1s infinite;
+  }
+  h1::after {
+    content: ' <<<';
+    color: #00ff41;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  button {
+    padding: 15px 30px;
+    border: 2px solid #00ff41;
+    background: transparent;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 10px;
+  }
+
+  button:hover {
+    background: #00ff41;
+    color: #0a0a0a;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.5);
+  }
+
+  /* Connection status */
+  #connectionStatus {
+    position: fixed; top: 20px; right: 20px;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.9);
+    border: 1px solid #00ff41;
+    font-size: 0.9em;
+    z-index: 100;
+    display: flex; align-items: center; gap: 10px;
+  }
+  #connectionStatus i { animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Admin Panel Styles */
+  .admin-panel-container {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.95);
+    border: 2px solid #00ff41;
+    padding: 0;
+    width: 80%;
+    max-width: 700px;
+    z-index: 1000;
+    box-shadow: 0 0 30px rgba(0,255,65,0.5);
+    font-family: 'Courier New', monospace;
+    color: #00ff41;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .admin-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,255,65,0.1);
+    border-bottom: 1px solid #00ff41;
+    padding: 15px 20px;
+  }
+
+  .admin-panel-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 10px #00ff41;
+  }
+
+  .admin-panel-close-btn {
+    background: #ff4d4d;
+    border: 2px solid #ff4d4d;
+    color: #ffffff;
+    font-size: 1.5em;
+    width: 35px;
+    height: 35px;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 0 10px rgba(255,77,77,0.5);
+  }
+
+  .admin-panel-close-btn:hover {
+    background: #ffffff;
+    color: #ff4d4d;
+    box-shadow: 0 0 20px rgba(255,77,77,0.8);
+    transform: scale(1.1);
+  }
+
+  .admin-panel-content {
+    padding: 20px;
+  }
+
+  .admin-output {
+    background: rgba(0,0,0,0.8);
+    border: 1px solid #00ff41;
+    padding: 15px;
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    white-space: pre-wrap;
+    font-size: 0.9em;
+    line-height: 1.4;
+    border-radius: 3px;
+  }
+
+  .admin-input-area {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
+
+  .admin-prompt {
+    color: #00ff41;
+    font-weight: bold;
+    text-shadow: 0 0 5px #00ff41;
+  }
+
+  .admin-command-input {
+    flex: 1;
+    padding: 12px 15px;
+    background: rgba(0,0,0,0.8);
+    border: 2px solid #00ff41;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    border-radius: 3px;
+    transition: all 0.3s;
+  }
+
+  .admin-command-input:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0,255,65,0.8);
+    background: rgba(0,255,65,0.05);
+  }
+
+  .admin-submit-btn {
+    padding: 12px 20px;
+    background: #00ff41;
+    border: 2px solid #00ff41;
+    color: #0a0a0a;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+    text-transform: uppercase;
+    font-weight: bold;
+    border-radius: 3px;
+    transition: all 0.3s;
+    box-shadow: 0 0 10px rgba(0,255,65,0.5);
+  }
+
+  .admin-submit-btn:hover {
+    background: #0a0a0a;
+    color: #00ff41;
+    box-shadow: 0 0 20px rgba(0,255,65,0.8);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-bg"></canvas>
+<div class="scanline"></div>
+
+<div class="container">
+  <h2 id="welcomeText"></h2>
+  <!-- Login box hidden initially -->
+  <div id="loginContainer">
+    <div class="panel-header">Secure Access Terminal</div>
+    <label for="usernameInput">Username</label>
+    <input type="text" id="usernameInput" placeholder="enter_username" autocomplete="off" />
+    <label for="passwordInput">Password</label>
+    <input type="password" id="passwordInput" placeholder="enter_password" autocomplete="off" />
+    <button id="loginBtn">[ INITIALIZE ACCESS ]</button>
+    <div id="message"></div>
+  </div>
+  <!-- Navigation buttons shown after login -->
+  <div id="navButtons">
+    <H1> [WELCOME TO BYPASS LABS CONTROLPANEL]</H1>
+  <div class="button-container">
+
+        <button class="hack-button cheats-btn" onclick="window.location.href='unavailable.html'">
+          <i class="fas fa-terminal btn-icon"></i>
+          [ CHEATS.EXE ]
+        </button>
+        <button class="hack-button unblockers-btn" onclick="window.location.href='unblockers.html'">
+          <i class="fas fa-unlock-alt btn-icon"></i>
+          [ UNBLOCKERS.SYS ]
+        </button>
+        <button class="hack-button soundboard-btn" onclick="window.location.href='sound_board.html'">
+          <i class="fas fa-volume-up btn-icon"></i>
+          [ SOUNDBOARD.APP ]
+        </button>
+     
+        <button class="hack-button unblockers-btn" onclick="window.location.href='games_Hub.html'">
+          <i class="fas fa-gamepad btn-icon"></i>
+          [ GAMES.HUB ]
+        </button>
+        <button class="hack-button unblockers-btn" onclick="window.location.href='game.html'">
+          <i class="fas fa-gamepad btn-icon"></i>
+          [ Shooter.HUB ]
+        </button> </div>
+</div>
+
+<div id="connectionStatus">
+  <i class="fas fa-wifi"></i>
+  <span class="loading">Checking connection</span>
+</div>
+<div id="adminPanelContainer" class="admin-panel-container">
+  <div class="admin-panel-header">
+    <span class="admin-panel-title">[ ADMIN CONSOLE ]</span>
+    <button id="closeAdminPanel" class="admin-panel-close-btn">&times;</button>
+  </div>
+  <div class="admin-panel-content">
+    <pre id="adminOutput" class="admin-output"></pre>
+    <div class="admin-input-area" id="adminInputArea">
+      <span class="admin-prompt">admin@console:~$</span>
+      <input type="text" id="adminCommandInput" class="admin-command-input" placeholder="Enter command..." />
+      <button id="submitAdminCommand" class="btn admin-submit-btn">Execute</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script>
+  // Matrix rain effect
+  const canvas = document.getElementById('matrix-bg');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
+  const fontSize = 14;
+  const columns = Math.floor(canvas.width / fontSize);
+  const drops = Array.from({length: columns}, () => Math.random() * -100);
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = fontSize + 'px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const text = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+        drops[i] = 0;
+      }
+      drops[i]++;
+    }
+  }
+  setInterval(drawMatrix, 35);
+  window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+
+  // Firebase and login logic
+  let firebaseEnabled = false;
+  let db = null;
+  let currentUsername = '';
+  let isUserLoggedIn = false;
+
+  const inMemoryStorage = {
+    users: new Set(['yassinyassinfree', 'mody', 'yaamen','A D H A M Y','EYAD A','ABDO','MOHAMED','HASSONY','TEST','admin','faris', 'kimo', 'yassin_yasser', 'anas','farouk']),
+    admins: new Set(['yassinyassinfree','mody','admin','HASSONY','farouk','yassinsh']),
+    banned: new Set(['MOHAMED']),
+    userspassword: new Map([
+      ['yassinyassinfree', 'yassinyassinking'],
+      ['mody', '1mody'],
+      ['yaamen', 'deadpool'],
+      ['admin', 'adminunknown'],
+      ['A D H A M Y', 'adhamy'],
+      ['EYAD A', 'eyada'],
+      ['ABDO', 'abdo'],
+      ['MOHAMED', 'mohamed'],
+      ['HASSONY', 'hassony'],
+      ['TEST', 'test'],
+      ['faris', 'faris'],
+      ['kimo','kimo_Ehab'],
+      ['farouk','farfar'],
+      ['yassin_yasser','yassin_yasser'],
+      ['anas','anas1'],
+      ['yassinsh','1234'],
+      ['magdyyy','magdy1']
+    ]),
+    adminsPasswords: new Map([
+      ['mody', '1mody-admin'],
+      ['yassinyassinfree', 'yassinyassin'],
+      ['admin', 'admin-admin'],
+      ['HASSONY', 'hassony'],
+      ['farouk','farouk-admin'],
+      ['yassinsh','admin1234'],
+    ]),
+    protectedpeople: new Set(['mody', 'yassinyassinfree', 'admin', 'HASSONY', 'farouk', 'yassinsh']),
+  };
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAMavguQ-mxKBiThJMJ2M0DH0ORecNAnag",
+    authDomain: "bypass-cf433.firebaseapp.com",
+    projectId: "bypass-cf433",
+    storageBucket: "bypass-cf433.firebasestorage.app",
+    messagingSenderId: "180606413279",
+    appId: "1:180606413279:web:64c33094256e559d153c6a",
+    measurementId: "G-47LV257VB3"
+  };
+
+  let connectionAttempts = 0;
+  const MAX_ATTEMPTS = 3;
+
+  async function initializeFirebase() {
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      const settings = {
+        cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+        merge: true
+      };
+      db.settings(settings);
+      try {
+        await db.enablePersistence({ synchronizeTabs: true });
+        console.log('🔒 Offline persistence enabled');
+      } catch (err) {
+        if (err.code === 'failed-precondition') {
+          console.warn('⚠️ Multiple tabs open, persistence disabled');
+        } else if (err.code === 'unimplemented') {
+          console.warn('⚠️ Browser doesn\'t support persistence');
+        }
+      }
+      const testQuery = db.collection('_test').limit(1);
+      const testPromise = testQuery.get();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 10000)
+      );
+      await Promise.race([testPromise, timeoutPromise]);
+      firebaseEnabled = true;
+      console.log('✅ Firebase connected successfully');
+      updateConnectionStatus(true);
+    } catch (err) {
+      console.warn('⚠️ Firebase unavailable, using in-memory storage:', err.message);
+      firebaseEnabled = false;
+      db = null;
+      updateConnectionStatus(false);
+    }
+  }
+
+  function updateConnectionStatus(isConnected) {
+    const statusEl = document.getElementById('connectionStatus');
+    if (statusEl) {
+      if (isConnected) {
+        statusEl.innerHTML = '<i class="fas fa-wifi"></i><span>ONLINE [Firebase]</span>';
+        statusEl.style.color = '#00ff41';
+        statusEl.style.borderColor = '#00ff41';
+      } else {
+        statusEl.innerHTML = '<i class="fas fa-database"></i><span>LOCAL MODE</span>';
+        statusEl.style.color = '#ffd93d';
+        statusEl.style.borderColor = '#ffd93d';
+      }
+    }
+  }
+
+  initializeFirebase();
+
+  // Typing animation for welcome message
+  const welcomeTextEl = document.getElementById('welcomeText');
+  const message = "Welcome to BypassLabs";
+  let index = 0;
+  function typeWriter() {
+    if (index < message.length) {
+      welcomeTextEl.innerHTML += message.charAt(index);
+      index++;
+      setTimeout(typeWriter, 100);
+    }
+  }
+  welcomeTextEl.addEventListener('click', () => {
+    document.getElementById('loginContainer').style.display = 'block';
+    welcomeTextEl.style.display = 'none';
+  });
+  typeWriter();
+
+  // Login button event
+ document.getElementById('loginBtn').addEventListener('click', async () => {
+    const username = document.getElementById('usernameInput').value.trim();
+    const password = document.getElementById('passwordInput').value.trim();
+    const messageDiv = document.getElementById('message');
+    const loginBtn = document.getElementById('loginBtn');
+
+    messageDiv.textContent = '';
+    let loginSuccess = false;
+
+    if (!username || !password) {
+      messageDiv.style.color = '#ff4d4d';
+      messageDiv.textContent = '[ERROR] Missing credentials';
+      return;
+    }
+
+    if (!inMemoryStorage.users.has(username) && !inMemoryStorage.admins.has(username)) {
+      messageDiv.style.color = '#ff4d4d';
+      messageDiv.textContent = '[ACCESS DENIED] Invalid credentials';
+      return;
+    }
+
+    let storedPassword = inMemoryStorage.userspassword.get(username) || inMemoryStorage.adminsPasswords.get(username);
+    if (storedPassword === password) {
+      if (inMemoryStorage.banned.has(username)) {
+        messageDiv.style.color = '#ff4d4d';
+        messageDiv.textContent = '[ACCESS DENIED] Account banned';
+        return;
+      }
+      loginSuccess = true;
+      currentUsername = username;
+      isUserLoggedIn = true;
+    }
+
+    if (loginSuccess) {
+      messageDiv.style.color = '#00ff41';
+      messageDiv.textContent = `[SUCCESS] Access granted: ${currentUsername}`;
+      // Hide login and show navigation buttons
+      document.getElementById('loginContainer').style.display = 'none';
+      document.getElementById('navButtons').style.display = 'flex';
+    } else {
+      messageDiv.style.color = '#ff4d4d';
+      messageDiv.textContent = '[ACCESS DENIED] Invalid credentials';
+    }
+  });
+
+  // Support Enter key
+  document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+
+  // Admin Panel Variables
+  const adminPanelContainer = document.getElementById('adminPanelContainer');
+  const adminOutput = document.getElementById('adminOutput');
+  const adminInputArea = document.getElementById('adminInputArea');
+  const adminCommandInput = document.getElementById('adminCommandInput');
+  const submitAdminCommandBtn = document.getElementById('submitAdminCommand');
+  const closeAdminPanelBtn = document.getElementById('closeAdminPanel');
+
+  // Helper function for admin output
+  function writeAdminOutput(text, isError = false) {
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = isError ? '[ERROR] ' : '[ADMIN] ';
+    const formattedText = `${timestamp} ${prefix}${text}`;
+    adminOutput.innerHTML += formattedText.replace(/\n/g, '<br>') + '<br>';
+    adminOutput.scrollTop = adminOutput.scrollHeight;
+  }
+
+  // Alt+A to open admin panel
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key === 'a') {
+      e.preventDefault();
+      openAdminPanel();
+    }
+  });
+
+  // Admin Panel Functions
+  async function openAdminPanel() {
+    const username = prompt('Enter admin username:');
+    if (!username) {
+      writeAdminOutput('No username entered. Access denied.', true);
+      adminPanelContainer.style.display = 'flex';
+      adminInputArea.classList.add('hidden');
+      return;
+    }
+
+    const password = prompt('Enter admin password:');
+
+    let isValidAdmin = false;
+    if (inMemoryStorage.admins.has(username)) {
+      const storedPass = inMemoryStorage.adminsPasswords.get(username) || inMemoryStorage.userspassword.get(username);
+      if (storedPass === password) {
+        isValidAdmin = true;
+      }
+    }
+
+    if (!isValidAdmin) {
+      adminPanelContainer.style.display = 'flex';
+      adminInputArea.classList.add('hidden');
+      writeAdminOutput('[!] ACCESS DENIED - Invalid credentials\n[!] Connection terminated.', true);
+      setTimeout(() => {
+        adminPanelContainer.style.display = 'none';
+      }, 2000);
+      return;
+    }
+
+    adminPanelContainer.style.display = 'flex';
+    adminInputArea.classList.remove('hidden');
+    adminOutput.textContent = '';
+    adminCommandInput.value = '';
+    adminCommandInput.focus();
+
+    const storageType = firebaseEnabled ? "Firebase Firestore" : "In-Memory Storage";
+    let commandList = "\nCommands:\n\n/ban USERNAME\n/unban USERNAME\n/change username OLD_USERNAME NEW_USERNAME\n/change password USERNAME NEW_PASSWORD\n/list\n/status\n/show password USERNAME\n/add USERNAME PASSWORD\n/add admin USERNAME PASSWORD\n/remove user USERNAME\n/remove admin USERNAME\n/protect USERNAME\n/unprotect USERNAME\n/history [USERNAME]";
+
+    writeAdminOutput(`ADMIN PANEL (${storageType})${commandList}\n\nEnter command:`);
+    writeAdminOutput(`admin@console:~$ `);
+
+    const executeAdminCommand = async () => {
+      const cmd = adminCommandInput.value.trim();
+      adminCommandInput.value = '';
+      writeAdminOutput(`admin@console:~$ ${cmd}`);
+
+      if (!cmd || !cmd.startsWith('/')) {
+        writeAdminOutput('Try again error in command 8908id.');
+        writeAdminOutput(`admin@console:~$ `);
+        return;
+      }
+
+      const parts = cmd.slice(1).trim().split(' ').map(p => p.trim());
+      const action = parts[0].toLowerCase();
+
+      switch(action) {
+        case 'ban': await banUser(parts[1]); break;
+        case 'unban': await unbanUser(parts[1]); break;
+        case 'change':
+          if (parts[1] === 'username' && parts[2] && parts[3]) {
+            await changeUsername(parts[2], parts[3]);
+          } else if (parts[1] === 'password' && parts[2] && parts[3]) {
+            changePassword(parts[2], parts[3]);
+          } else {
+            writeAdminOutput('Invalid change command. Use:\n/change username OLD_USERNAME NEW_USERNAME\n/change password USERNAME NEW_PASSWORD');
+          }
+          break;
+        case 'list': await listUsers(); break;
+        case 'status': showSystemStatus(); break;
+        case 'show':
+          if (parts[1]==='password' && parts[2]) {
+            showPassword(parts[2]);
+          } else {
+            writeAdminOutput('Invalid show command. Use /show password USERNAME');
+          }
+          break;
+        case 'add':
+          if (parts.length === 3) {
+            await addUser(parts[1], parts[2]);
+          } else if (parts.length === 4 && parts[1] === 'admin') {
+            await addAdmin(parts[2], parts[3]);
+          } else {
+            writeAdminOutput('Usage: /add USERNAME PASSWORD or /add admin USERNAME PASSWORD');
+          }
+          break;
+        case 'remove':
+          if (parts.length === 3 && parts[1] === 'user') {
+            await removeUser(parts[2]);
+          } else if (parts.length === 3 && parts[1] === 'admin') {
+            await removeAdmin(parts[2]);
+          } else {
+            writeAdminOutput('Usage: /remove user USERNAME or /remove admin USERNAME');
+          }
+          break;
+        case 'protect':
+          if (parts[1]) {
+            protectUser(parts[1]);
+          } else {
+            writeAdminOutput('Usage: /protect USERNAME');
+          }
+          break;
+        case 'unprotect':
+          if (parts[1]) {
+            unprotectUser(parts[1]);
+          } else {
+            writeAdminOutput('Usage: /unprotect USERNAME');
+          }
+          break;
+        case 'history':
+          if (parts[1]) {
+            await showUserHistory(parts[1]);
+          } else {
+            await showUserHistory(currentUsername);
+          }
+          break;
+        default: writeAdminOutput('Unknown command.');
+      }
+
+      writeAdminOutput(`admin@console:~$ `);
+    };
+
+    submitAdminCommandBtn.onclick = executeAdminCommand;
+    adminCommandInput.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        executeAdminCommand();
+      }
+    };
+
+    closeAdminPanelBtn.onclick = () => {
+      adminPanelContainer.style.display = 'none';
+      submitAdminCommandBtn.onclick = null;
+      adminCommandInput.onkeydown = null;
+      adminInputArea.classList.remove('hidden');
+    };
+  }
+
+  async function banUser(username) {
+    if (!username) { writeAdminOutput('Specify username.'); return; }
+    if (!inMemoryStorage.users.has(username) && !inMemoryStorage.admins.has(username)) {
+      writeAdminOutput(`User '${username}' does not exist.`);
+      return;
+    }
+
+    if (inMemoryStorage.protectedpeople.has(username)) {
+      writeAdminOutput(`Cannot ban protected user '${username}'. Ask the owner to remove from protected list first.`);
+      return;
+    }
+
+    if (firebaseEnabled && db) {
+      try {
+        await db.collection('banned').doc(username).set({ banned: true });
+        writeAdminOutput(`User '${username}' has been banned in Firebase.`);
+      } catch (error) {
+        writeAdminOutput(`Error banning user '${username}' in Firebase: ${error.message}`);
+        return;
+      }
+    }
+    inMemoryStorage.banned.add(username);
+    writeAdminOutput(`User '${username}' has been banned.`);
+  }
+
+  async function unbanUser(username) {
+    if (!username) { writeAdminOutput('Specify username.'); return; }
+    if (!inMemoryStorage.banned.has(username)) {
+      writeAdminOutput(`User '${username}' is not banned.`);
+      return;
+    }
+
+    if (firebaseEnabled && db) {
+      try {
+        await db.collection('banned').doc(username).delete();
+        writeAdminOutput(`User '${username}' has been unbanned in Firebase.`);
+      } catch (error) {
+        writeAdminOutput(`Error unbanning user '${username}' in Firebase: ${error.message}`);
+        return;
+      }
+    }
+    inMemoryStorage.banned.delete(username);
+    writeAdminOutput(`User '${username}' has been unbanned.`);
+  }
+
+  async function changeUsername(oldUsername, newUsername) {
+    if (!oldUsername || !newUsername) {
+      writeAdminOutput('Both old and new usernames are required.');
+      return;
+    }
+
+    if (inMemoryStorage.protectedpeople.has(oldUsername)) {
+      writeAdminOutput(`Cannot change username of protected user '${oldUsername}'.`);
+      return;
+    }
+
+    let isAdmin = inMemoryStorage.admins.has(oldUsername);
+    let isUser = inMemoryStorage.users.has(oldUsername);
+
+    if (!isAdmin && !isUser) {
+      writeAdminOutput(`User '${oldUsername}' does not exist.`);
+      return;
+    }
+
+    if (inMemoryStorage.users.has(newUsername) || inMemoryStorage.admins.has(newUsername)) {
+      writeAdminOutput(`Username '${newUsername}' already exists.`);
+      return;
+    }
+
+    if (isAdmin) {
+      inMemoryStorage.admins.delete(oldUsername);
+      inMemoryStorage.admins.add(newUsername);
+    } else {
+      inMemoryStorage.users.delete(oldUsername);
+      inMemoryStorage.users.add(newUsername);
+    }
+
+    let userPassword = null;
+    if (inMemoryStorage.userspassword.has(oldUsername)) {
+      userPassword = inMemoryStorage.userspassword.get(oldUsername);
+      inMemoryStorage.userspassword.delete(oldUsername);
+      inMemoryStorage.userspassword.set(newUsername, userPassword);
+    }
+
+    if (inMemoryStorage.banned.has(oldUsername)) {
+      inMemoryStorage.banned.delete(oldUsername);
+      inMemoryStorage.banned.add(newUsername);
+    }
+
+    writeAdminOutput(`Username changed from '${oldUsername}' to '${newUsername}' successfully.`);
+  }
+
+  function changePassword(username, newPassword) {
+    if (!username || !newPassword.trim()) {
+      writeAdminOutput('Both username and new password are required.');
+      return;
+    }
+
+    if (!inMemoryStorage.users.has(username) && !inMemoryStorage.admins.has(username)) {
+      writeAdminOutput(`User '${username}' does not exist.`);
+      return;
+    }
+
+    inMemoryStorage.userspassword.set(username, newPassword);
+    writeAdminOutput(`Password for '${username}' has been changed successfully.`);
+  }
+
+  async function listUsers() {
+    let msg='=== USERS LIST ===\n\n';
+
+    msg+='Admins:\n';
+    for (let a of inMemoryStorage.admins) {
+      const password = inMemoryStorage.userspassword.has(a) ? inMemoryStorage.userspassword.get(a) : 'No password';
+      const banned = inMemoryStorage.banned.has(a) ? ' (BANNED)' : '';
+      const protectedStatus = inMemoryStorage.protectedpeople.has(a) ? ' (PROTECTED)' : '';
+      const activitySummary = await getUserActivitySummary(a);
+      msg+=`- ${a} - Password: ${password}${banned}${protectedStatus} | ${activitySummary}\n`;
+    }
+
+    msg+='\nAllowed Users:\n';
+    for (let u of inMemoryStorage.users) {
+      if(!inMemoryStorage.admins.has(u)) {
+        const password = inMemoryStorage.userspassword.has(u) ? inMemoryStorage.userspassword.get(u) : 'No password';
+        const banned = inMemoryStorage.banned.has(u) ? ' (BANNED)' : '';
+        const protectedStatus = inMemoryStorage.protectedpeople.has(u) ? ' (PROTECTED)' : '';
+        const activitySummary = await getUserActivitySummary(u);
+        msg+=`- ${u} - Password: ${password}${banned}${protectedStatus} | ${activitySummary}\n`;
+      }
+    }
+
+    msg+='\nBanned Users:\n';
+    for (let b of inMemoryStorage.banned) {
+      const activitySummary = await getUserActivitySummary(b);
+      msg+=`- ${b} | ${activitySummary}\n`;
+    }
+
+    msg+='\nProtected Users:\n';
+    for (let p of inMemoryStorage.protectedpeople) {
+      const activitySummary = await getUserActivitySummary(p);
+      msg+=`- ${p} | ${activitySummary}\n`;
+    }
+
+    writeAdminOutput(msg);
+  }
+
+  async function getUserActivitySummary(username) {
+    if (firebaseEnabled && db) {
+      try {
+        const userActivityRef = db.collection('user_activity').doc(username);
+        const doc = await userActivityRef.get();
+        if (doc.exists) {
+          const data = doc.data();
+          const modules = data.modules || [];
+          if (modules.length === 0) return 'No activity';
+          const lastActivity = modules[modules.length - 1].timestamp;
+          return `${modules.length} modules opened, last: ${new Date(lastActivity).toLocaleString()}`;
+        } else {
+          return 'No activity';
+        }
+      } catch (error) {
+        return 'Error fetching activity';
+      }
+    } else {
+      try {
+        const key = 'user_activity_' + username;
+        const activities = JSON.parse(localStorage.getItem(key) || '[]');
+        if (activities.length === 0) return 'No activity';
+        const lastActivity = activities[activities.length - 1].timestamp;
+        return `${activities.length} modules opened, last: ${new Date(lastActivity).toLocaleString()}`;
+      } catch (error) {
+        return 'No activity';
+      }
+    }
+  }
+
+  function showSystemStatus() {
+    const userCount = inMemoryStorage.users.size;
+    const adminCount = inMemoryStorage.admins.size;
+    const bannedCount = inMemoryStorage.banned.size;
+    const protectedCount = inMemoryStorage.protectedpeople.size;
+    writeAdminOutput(`System Status:\n\nDatabase: ${firebaseEnabled ? 'Connected' : 'Offline (Memory)'}\nUsers: ${userCount}\nAdmins: ${adminCount}\nBanned: ${bannedCount}\nProtected: ${protectedCount}`);
+  }
+
+  function showPassword(username) {
+    if (!username) { writeAdminOutput('Specify username.'); return; }
+
+    let userExists = inMemoryStorage.users.has(username) || inMemoryStorage.admins.has(username);
+
+    if (!userExists) {
+      writeAdminOutput(`User '${username}' does not exist.`);
+      return;
+    }
+
+    if (inMemoryStorage.userspassword.has(username)) {
+      writeAdminOutput(`Password for ${username}:\n${inMemoryStorage.userspassword.get(username)}`);
+    } else {
+      writeAdminOutput(`No password set for ${username}.`);
+    }
+  }
+
+  async function addUser(username, password) {
+    if (!username || !password) {
+      writeAdminOutput('Specify username and password.');
+      return;
+    }
+
+    if (inMemoryStorage.users.has(username) || inMemoryStorage.admins.has(username)) {
+      writeAdminOutput(`User '${username}' already exists.`);
+      return;
+    }
+
+    inMemoryStorage.users.add(username);
+    inMemoryStorage.userspassword.set(username, password);
+    writeAdminOutput(`New user '${username}' added successfully!`);
+  }
+
+  async function addAdmin(username, password) {
+    if (!username || !password) {
+      writeAdminOutput('Specify username and password.');
+      return;
+    }
+
+    if (inMemoryStorage.admins.has(username)) {
+      writeAdminOutput(`Admin '${username}' already exists.`);
+      return;
+    }
+
+    inMemoryStorage.admins.add(username);
+    inMemoryStorage.adminsPasswords.set(username, password);
+    writeAdminOutput(`New admin '${username}' added successfully!`);
+  }
+
+  async function removeUser(username) {
+    if (!username) {
+      writeAdminOutput('Specify username.');
+      return;
+    }
+
+    if (!inMemoryStorage.users.has(username)) {
+      writeAdminOutput(`User '${username}' does not exist or is an admin.`);
+      return;
+    }
+
+    inMemoryStorage.users.delete(username);
+    inMemoryStorage.userspassword.delete(username);
+    inMemoryStorage.banned.delete(username);
+    writeAdminOutput(`User '${username}' removed successfully!`);
+  }
+
+  async function removeAdmin(username) {
+    if (!username) {
+      writeAdminOutput('Specify username.');
+      return;
+    }
+
+    if (!inMemoryStorage.admins.has(username)) {
+      writeAdminOutput(`Admin '${username}' does not exist.`);
+      return;
+    }
+
+    inMemoryStorage.admins.delete(username);
+    inMemoryStorage.adminsPasswords.delete(username);
+    inMemoryStorage.banned.delete(username);
+    writeAdminOutput(`Admin '${username}' removed successfully!`);
+  }
+
+  function protectUser(username) {
+    if (!username) {
+      writeAdminOutput('Specify username.');
+      return;
+    }
+
+    if (!inMemoryStorage.users.has(username) && !inMemoryStorage.admins.has(username)) {
+      writeAdminOutput(`User '${username}' does not exist.`);
+      return;
+    }
+
+    if (inMemoryStorage.protectedpeople.has(username)) {
+      writeAdminOutput(`User '${username}' is already protected.`);
+      return;
+    }
+
+    if (currentUsername.toLowerCase() !== 'yassinyassinfree') {
+      writeAdminOutput(`Only the owner can add users to the protected list.`);
+      return;
+    }
+
+    inMemoryStorage.protectedpeople.add(username);
+    writeAdminOutput(`User '${username}' has been added to protected list.`);
+  }
+
+  function unprotectUser(username) {
+    if (!username) {
+      writeAdminOutput('Specify username.');
+      return;
+    }
+
+    if (!inMemoryStorage.protectedpeople.has(username)) {
+      writeAdminOutput(`User '${username}' is not protected.`);
+      return;
+    }
+
+    if (currentUsername.toLowerCase() !== 'yassinyassinfree') {
+      writeAdminOutput(`Only the owner can remove users from the protected list.`);
+      return;
+    }
+
+    inMemoryStorage.protectedpeople.delete(username);
+    writeAdminOutput(`User '${username}' has been removed from protected list.`);
+  }
+
+  async function showUserHistory(username) {
+    if (!username) {
+      writeAdminOutput('Specify username.');
+      return;
+    }
+
+    // Check if the current user is an admin
+    const isAdmin = inMemoryStorage.admins.has(currentUsername);
+    if (!isAdmin) {
+      writeAdminOutput('Access denied. Only admins can view user history.');
+      return;
+    }
+
+    if (firebaseEnabled && db) {
+      // Fetch from Firebase
+      const userActivityRef = db.collection('user_activity').doc(username);
+      try {
+        const doc = await userActivityRef.get();
+        if (doc.exists) {
+          const data = doc.data();
+          const modules = data.modules || [];
+          if (modules.length === 0) {
+            writeAdminOutput(`No activity history found for user '${username}'.`);
+          } else {
+            let historyMsg = `Activity history for '${username}':\n\n`;
+            modules.forEach(activity => {
+              historyMsg += `${activity.timestamp} - Opened: ${activity.module}\n`;
+            });
+            writeAdminOutput(historyMsg);
+          }
+        } else {
+          writeAdminOutput(`No activity history found for user '${username}'.`);
+        }
+      } catch (error) {
+        writeAdminOutput(`Error fetching history for '${username}': ${error.message}`);
+      }
+    } else {
+      // Fetch from localStorage
+      try {
+        const key = 'user_activity_' + username;
+        const activities = JSON.parse(localStorage.getItem(key) || '[]');
+        if (activities.length === 0) {
+          writeAdminOutput(`No activity history found for user '${username}'.`);
+        } else {
+          let historyMsg = `Activity history for '${username}':\n\n`;
+          activities.forEach(activity => {
+            historyMsg += `${activity.timestamp} - Opened: ${activity.module}\n`;
+          });
+          writeAdminOutput(historyMsg);
+        }
+      } catch (error) {
+        writeAdminOutput(`Error fetching history for '${username}': ${error.message}`);
+      }
+    }
+  }
+
+  setInterval(() => {
+    const title = document.querySelector('.terminal-title');
+    if (title && Math.random() > 0.95) {
+      title.style.textShadow = '2px 0 0 #ff6b6b, -2px 0 0 #4ecdc4, 0 0 25px #00ff41';
+      setTimeout(() => {
+        title.style.textShadow = '0 0 15px #00ff41';
+      }, 150);
+    }
+  }, 2500);
+</script>
+<script>
+  // Helper function for admin output
+  function writeAdminOutput(text, isError = false) {
+    const adminOutput = document.getElementById('adminOutput');
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = isError ? '[ERROR] ' : '[ADMIN] ';
+    adminOutput.innerHTML += `${timestamp} ${prefix}${text}`.replace(/\n/g, '<br>') + '<br>';
+    adminOutput.scrollTop = adminOutput.scrollHeight;
+  }
+
+  // Function to open admin panel after Alt+A
+  async function openAdminPanel() {
+    const username = prompt('Enter admin username:');
+    if (!username) {
+      writeAdminOutput('No username entered. Access denied.', true);
+      document.getElementById('adminPanelContainer').style.display = 'flex';
+      document.getElementById('adminInputArea').classList.add('hidden');
+      return;
+    }
+
+    const password = prompt('Enter admin password:');
+
+    // Validate credentials
+    let isValidAdmin = false;
+    if (inMemoryStorage.admins.has(username)) {
+      const storedPass = inMemoryStorage.adminsPasswords.get(username) || inMemoryStorage.userspassword.get(username);
+      if (storedPass === password) {
+        isValidAdmin = true;
+      }
+    }
+
+    if (!isValidAdmin) {
+      // Denied
+      document.getElementById('adminPanelContainer').style.display = 'flex';
+      document.getElementById('adminInputArea').classList.add('hidden');
+      writeAdminOutput('[!] ACCESS DENIED - Invalid credentials\n[!] Connection terminated.', true);
+      setTimeout(() => {
+        document.getElementById('adminPanelContainer').style.display = 'none';
+      }, 2000);
+      return;
+    }
+
+    // Show panel
+    const panel = document.getElementById('adminPanelContainer');
+    panel.style.display = 'flex';
+    const adminInputArea = document.getElementById('adminInputArea');
+    adminInputArea.classList.remove('hidden');
+    const adminOutput = document.getElementById('adminOutput');
+    adminOutput.textContent = '';
+    const adminCommandInput = document.getElementById('adminCommandInput');
+    adminCommandInput.value = '';
+    adminCommandInput.focus();
+
+    // Display commands info
+    const storageType = firebaseEnabled ? "Firebase Firestore" : "In-Memory Storage";
+    const commandList = "\nCommands:\n\n/ban USERNAME\n/unban USERNAME\n/change username OLD_USERNAME NEW_USERNAME\n/change password USERNAME NEW_PASSWORD\n/list\n/status\n/show password USERNAME\n/add USERNAME PASSWORD\n/add admin USERNAME PASSWORD\n/remove user USERNAME\n/remove admin USERNAME\n/protect USERNAME\n/unprotect USERNAME\n/history [USERNAME]";
+    writeAdminOutput(`ADMIN PANEL (${storageType})${commandList}\n\nEnter command:`);
+    writeAdminOutput(`admin@console:~$ `);
+
+    // Command execution
+    const executeAdminCommand = async () => {
+      const cmd = adminCommandInput.value.trim();
+      adminCommandInput.value = '';
+      writeAdminOutput(`admin@console:~$ ${cmd}`);
+
+      if (!cmd || !cmd.startsWith('/')) {
+        writeAdminOutput('Try again error in command 8908id.');
+        writeAdminOutput(`admin@console:~$ `);
+        return;
+      }
+
+      const parts = cmd.slice(1).trim().split(' ').map(p => p.trim());
+      const action = parts[0].toLowerCase();
+
+      switch(action) {
+        case 'ban': await banUser(parts[1]); break;
+        case 'unban': await unbanUser(parts[1]); break;
+        case 'change':
+          if (parts[1] === 'username' && parts[2] && parts[3]) {
+            await changeUsername(parts[2], parts[3]);
+          } else if (parts[1] === 'password' && parts[2] && parts[3]) {
+            changePassword(parts[2], parts[3]);
+          } else {
+            writeAdminOutput('Invalid change command. Use:\n/change username OLD_USERNAME NEW_USERNAME\n/change password USERNAME NEW_PASSWORD');
+          }
+          break;
+        case 'list': await listUsers(); break;
+        case 'status': showSystemStatus(); break;
+        case 'show':
+          if (parts[1]==='password' && parts[2]) {
+            showPassword(parts[2]);
+          } else {
+            writeAdminOutput('Invalid show command. Use /show password USERNAME');
+          }
+          break;
+        case 'add':
+          if (parts.length === 3) {
+            await addUser(parts[1], parts[2]);
+          } else if (parts.length === 4 && parts[1] === 'admin') {
+            await addAdmin(parts[2], parts[3]);
+          } else {
+            writeAdminOutput('Usage: /add USERNAME PASSWORD or /add admin USERNAME PASSWORD');
+          }
+          break;
+        case 'remove':
+          if (parts.length === 3 && parts[1] === 'user') {
+            await removeUser(parts[2]);
+          } else if (parts.length === 3 && parts[1] === 'admin') {
+            await removeAdmin(parts[2]);
+          } else {
+            writeAdminOutput('Usage: /remove user USERNAME or /remove admin USERNAME');
+          }
+          break;
+        case 'protect':
+          if (parts[1]) {
+            protectUser(parts[1]);
+          } else {
+            writeAdminOutput('Usage: /protect USERNAME');
+          }
+          break;
+        case 'unprotect':
+          if (parts[1]) {
+            unprotectUser(parts[1]);
+          } else {
+            writeAdminOutput('Usage: /unprotect USERNAME');
+          }
+          break;
+        case 'history':
+          if (parts[1]) {
+            await showUserHistory(parts[1]);
+          } else {
+            await showUserHistory(currentUsername);
+          }
+          break;
+        default: writeAdminOutput('Unknown command.');
+      }
+
+      // Re-focus input
+      writeAdminOutput(`admin@console:~$ `);
+    };
+
+    // Assign button and key handler
+    document.getElementById('submitAdminCommand').onclick = executeAdminCommand;
+    document.getElementById('adminCommandInput').onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        executeAdminCommand();
+      }
+    };
+
+    // Close button
+    document.getElementById('closeAdminPanel').onclick = () => {
+      document.getElementById('adminPanelContainer').style.display = 'none';
+      document.getElementById('submitAdminCommand').onclick = null;
+      document.getElementById('adminCommandInput').onkeydown = null;
+      document.getElementById('adminInputArea').classList.add('hidden');
+    };
+  }
+
+  // Add event listener for Alt + A
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      openAdminPanel();
+    }
+  });
+
+  sessionStorage.setItem('currentUsername', username);
+</script>
+</body>
+</html>

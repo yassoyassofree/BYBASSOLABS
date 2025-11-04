@@ -1,0 +1,6 @@
+- [x] Add HTML structure for admin panel (adminPanelContainer, adminOutput, adminInputArea, etc.)
+- [x] Add CSS styling for admin panel to match hacker theme
+- [x] Add JavaScript functions for openAdminPanel and all admin commands
+- [x] Add event listener for Alt+A to trigger openAdminPanel
+- [x] Ensure Firebase integration in admin functions (ban/unban, history, etc.)
+- [x] Test Alt+A functionality and admin login
